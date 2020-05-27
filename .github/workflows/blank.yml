@@ -1,0 +1,66 @@
+#修改TNAME: git
+name: Build Padavan_toolchain
+
+on: 
+  release:
+    types: [published]
+  push:
+    tags:
+    - 'v*'
+  #  branches: 
+  #    - master
+#  schedule:
+#    - cron: 0 8 * * 5
+  watch:
+    types: [started]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    if: github.event.repository.owner.id == github.event.sender.id
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+    - name: Initialization environment
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install unzip libtool-bin curl cmake gperf gawk flex bison nano xxd \
+        cpio git python-docutils gettext automake autopoint texinfo build-essential help2man \
+        pkg-config zlib1g-dev libgmp3-dev libmpc-dev libmpfr-dev libncurses5-dev libltdl-dev gcc-multilib
+    - name: Clone source code
+      env:
+        TNAME: https://github.com/hminid/padavan-ng.git
+      run: |
+        git clone --depth=1 $TNAME /opt/rt-n56u
+    - name: Build Firmware
+      run: |
+        cd /opt/rt-n56u/toolchain
+        if [ ! -f build_toolchain.sh ] ; then
+        echo "build_toolchain.sh not found "
+        exit 1
+        fi
+        sudo ./clean_sources.sh
+        sudo ./build_toolchain.sh
+        #
+    - name: tar_toolchain
+      run: |
+        cd /opt/rt-n56u/toolchain
+        sudo tar -cvf out.tar out
+        #
+        cd /opt/rt-n56u
+        sudo tar -cvf toolchain.tar toolchain
+        #  
+    - name : Upload Padavan-toolchain_out.tar
+      uses: actions/upload-artifact@master
+      with:
+        name: Padavan-toolchain_out.tar
+        path: /opt/rt-n56u/toolchain/out.tar
+        #
+    - name : Upload Padavan-toolchain.tar
+      uses: actions/upload-artifact@master
+      with:
+        name: Padavan-toolchain.tar
+        path: /opt/rt-n56u/toolchain.tar
